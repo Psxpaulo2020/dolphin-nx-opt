@@ -85,6 +85,12 @@ if ! awk '$1 == "U" && $2 ~ /^(gelf_|elf_|elf32_|elf64_)/ { found = 1 }
         -e 's/_VULKAN_SWITCH_ELF_LIBRARY//g' "${config}"
     fi
   done
+  if [[ -f "${PREPARED}/lib/pkgconfig/vulkan.pc" ]]; then
+    sed -i 's/Requires.private: libelf, /Requires.private: /' \
+      "${PREPARED}/lib/pkgconfig/vulkan.pc"
+  fi
+  printf '%s\n' 'All SDK archives checked with target nm: no libelf references.' \
+    > "${PREPARED}/dolphin-sdk-no-libelf"
 fi
 
 # Dolphin's Vulkan loader stores entry points in global PFN variables named

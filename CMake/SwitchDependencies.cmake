@@ -181,11 +181,15 @@ set_target_properties(SwitchNVK PROPERTIES
 )
 add_library(Switch::NVK ALIAS SwitchNVK)
 
-add_library(SwitchELF STATIC IMPORTED GLOBAL)
-set_target_properties(SwitchELF PROPERTIES
-  IMPORTED_LOCATION "${_switch_portlibs}/lib/libelf.a"
-  INTERFACE_INCLUDE_DIRECTORIES "${_switch_portlibs}/include"
-)
+add_library(SwitchELF INTERFACE)
+if(EXISTS "${_switch_portlibs}/lib/libelf.a")
+  target_link_libraries(SwitchELF INTERFACE "${_switch_portlibs}/lib/libelf.a")
+  target_include_directories(SwitchELF INTERFACE "${_switch_portlibs}/include")
+elseif(EXISTS "${DOLPHIN_SWITCH_MESA_SDK_ROOT}/dolphin-sdk-no-libelf")
+  message(STATUS "Unified Mesa SDK verified to have no libelf references")
+else()
+  message(FATAL_ERROR "libelf is missing and the Mesa SDK has not been verified without it")
+endif()
 add_library(Switch::ELF ALIAS SwitchELF)
 
 add_library(SwitchExpat STATIC IMPORTED GLOBAL)
