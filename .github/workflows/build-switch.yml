@@ -51,9 +51,18 @@ jobs:
         run: |
           set -euo pipefail
           git config --global --add safe.directory "$GITHUB_WORKSPACE"
-          bash Tools/Switch/build.sh "$RUNNER_TEMP/mesa-switch-unified-sdk.zip"
+          bash Tools/Switch/build.sh "$RUNNER_TEMP/mesa-switch-unified-sdk.zip" 2>&1 | tee "$RUNNER_TEMP/dolphin-switch-build.log"
           test -s build-switch/Binaries/dolphin.nro
           sha256sum build-switch/Binaries/dolphin.nro > build-switch/Binaries/dolphin.nro.sha256
+
+      - name: Upload build diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: dolphin-build-log-${{ github.run_number }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/dolphin-switch-build.log
+          if-no-files-found: warn
+          retention-days: 7
 
       - name: Upload experimental NRO
         uses: actions/upload-artifact@v4
