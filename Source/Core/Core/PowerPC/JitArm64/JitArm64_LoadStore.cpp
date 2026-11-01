@@ -121,6 +121,8 @@ void JitArm64::SafeLoadToReg(u32 dest, s32 addr, s32 offsetReg, u32 flags, s32 o
     gpr.BindToRegister(addr, false);
     set_addr_reg_if_needed();
     MOV(gpr.R(addr), addr_reg);
+    // The locked address register still holds the effective address until the memory access.
+    addr_reg_set = true;
   }
 
   BitSet32 regs_in_use = gpr.GetCallerSavedUsed();
@@ -269,6 +271,8 @@ void JitArm64::SafeStoreFromReg(s32 dest, u32 value, s32 regOffset, u32 flags, s
     gpr.BindToRegister(dest, false);
     set_addr_reg_if_needed();
     MOV(gpr.R(dest), addr_reg);
+    // The locked address register still holds the effective address until the memory access.
+    addr_reg_set = true;
   }
 
   BitSet32 regs_in_use = gpr.GetCallerSavedUsed();

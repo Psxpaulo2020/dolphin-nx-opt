@@ -1,0 +1,66 @@
+name: Build experimental Switch NRO
+
+on:
+  push:
+    branches: [boxing-experimental]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  switch:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    container:
+      image: devkitpro/devkita64:latest
+    env:
+      DOLPHIN_SWITCH_JOBS: '2'
+      DOLPHIN_SWITCH_RELEASE_VERSION: '1.2.0-boxing-exp'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          persist-credentials: false
+
+      - name: Install build dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          apt-get update
+          apt-get install -y --no-install-recommends build-essential git cmake ninja-build libarchive-tools bison flex python3 python3-mako gettext pkg-config curl ca-certificates
+          dkp-pacman -Syu --noconfirm
+          dkp-pacman -S --needed --noconfirm switch-dev deko3d switch-sdl2 switch-sdl2_ttf switch-sdl2_image switch-curl switch-ntfs-3g switch-zlib switch-libzstd switch-libexpat switch-cmake
+
+      - name: Fetch and verify unified Mesa SDK
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          curl --fail --location --proto '=https' --proto-redir '=https' --retry 3 \
+            --header "Authorization: Bearer $GH_TOKEN" \
+            --header 'Accept: application/vnd.github+json' \
+            https://api.github.com/repos/danfromtico/mesa-switch/actions/artifacts/11781503719/zip \
+            -o "$RUNNER_TEMP/mesa-switch-unified-sdk.zip"
+          printf '%s  %s\n' b6af7db8417f8ce8a2eb7f308915aaf9553d99c55b9c5ec121b30a99662f859d "$RUNNER_TEMP/mesa-switch-unified-sdk.zip" | sha256sum --check --strict
+
+      - name: Build launcher and embedded Deko3D runtime
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
+          bash Tools/Switch/build.sh "$RUNNER_TEMP/mesa-switch-unified-sdk.zip"
+          test -s build-switch/Binaries/dolphin.nro
+          sha256sum build-switch/Binaries/dolphin.nro > build-switch/Binaries/dolphin.nro.sha256
+
+      - name: Upload experimental NRO
+        uses: actions/upload-artifact@v4
+        with:
+          name: dolphin-boxing-experimental-${{ github.run_number }}
+          path: |
+            build-switch/Binaries/dolphin.nro
+            build-switch/Binaries/dolphin.nro.sha256
+          if-no-files-found: error
+          retention-days: 7
