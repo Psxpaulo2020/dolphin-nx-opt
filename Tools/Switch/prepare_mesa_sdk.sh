@@ -67,6 +67,20 @@ PREPARED="${WORK}/prepared"
 mkdir -p "${PREPARED}"
 cp -a "${SDK_SOURCE}/." "${PREPARED}/"
 
+# Some unified SDKs retain libelf in their CMake metadata even though the
+# Horizon archives contain no libelf references. Drop only that stale link
+# dependency, and only after inspecting every archive with the target nm.
+"${NM}" --undefined-only "${PREPARED}"/lib/*.a > "${WORK}/undefined-symbols.txt"
+if ! awk '$1 == "U" && $2 ~ /^(gelf_|elf_|elf32_|elf64_)/ { found = 1 }
+         END { exit !found }' "${WORK}/undefined-symbols.txt"; then
+  for package in OpenGL Vulkan; do
+    config="${PREPARED}/lib/cmake/${package}/${package}Config.cmake"
+    if [[ -f "${config}" ]]; then
+      sed -i '/_OPENGL_elf_LIBRARY/d; /_VULKAN_SWITCH_ELF_LIBRARY/d' "${config}"
+    fi
+  done
+fi
+
 # Dolphin's Vulkan loader stores entry points in global PFN variables named
 # like Vulkan functions. Resolve Mesa into one object and localize only the
 # public vk* entry points which collide with those variables. Mesa's internal
