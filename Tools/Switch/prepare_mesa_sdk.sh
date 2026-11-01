@@ -76,7 +76,13 @@ if ! awk '$1 == "U" && $2 ~ /^(gelf_|elf_|elf32_|elf64_)/ { found = 1 }
   for package in OpenGL Vulkan; do
     config="${PREPARED}/lib/cmake/${package}/${package}Config.cmake"
     if [[ -f "${config}" ]]; then
-      sed -i '/_OPENGL_elf_LIBRARY/d; /_VULKAN_SWITCH_ELF_LIBRARY/d' "${config}"
+      sed -i \
+        -e '/^find_library(_OPENGL_elf_LIBRARY /d' \
+        -e '/^find_library(_VULKAN_SWITCH_ELF_LIBRARY /d' \
+        -e 's/${_OPENGL_elf_LIBRARY}//g' \
+        -e 's/_OPENGL_elf_LIBRARY//g' \
+        -e 's/"${_VULKAN_SWITCH_ELF_LIBRARY}"//g' \
+        -e 's/_VULKAN_SWITCH_ELF_LIBRARY//g' "${config}"
     fi
   done
 fi
